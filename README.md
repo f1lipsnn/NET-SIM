@@ -1,3 +1,3 @@
-# MAGIC REALM
+# NET SIMULATOR
 
-Web: https://f1lipsnn.github.io/magicrealm/
+Web: https://f1lipsnn.github.io/NET-SIM/
