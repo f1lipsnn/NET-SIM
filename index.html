@@ -354,6 +354,67 @@ body::after {
 .badge-new { margin-left:auto; font-family:var(--font-mono); font-size:7px; font-weight:700; letter-spacing:1px; color:#00121a; background:var(--green); padding:1px 4px; box-shadow:0 0 8px rgba(0,255,200,.4); }
 .tb-item .chk + .badge-new, .tb-item .badge-new + .chk { margin-left:6px; }
 
+/* ── GLOBAL MODE BUTTON ── */
+.tb-global-btn {
+  display:flex; align-items:center; gap:7px; position:relative;
+  margin:0 6px; padding:7px 16px;
+  font-family:var(--font-display); font-size:12px; font-weight:700; letter-spacing:2px;
+  border:1px solid var(--purple2); color:var(--purple);
+  background:linear-gradient(180deg, rgba(180,123,255,.12), rgba(157,92,255,.04));
+  cursor:pointer; transition:all .2s; white-space:nowrap;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  box-shadow:0 0 16px rgba(157,92,255,.2), inset 0 0 14px rgba(157,92,255,.06);
+}
+.tb-global-btn .gb-ico { font-size:15px; filter:drop-shadow(0 0 6px rgba(180,123,255,.8)); animation:globe-spin-ico 8s linear infinite; }
+@keyframes globe-spin-ico { to{transform:rotate(360deg)} }
+.tb-global-btn:hover { color:#d9c2ff; border-color:var(--purple); box-shadow:0 0 24px rgba(157,92,255,.4), inset 0 0 18px rgba(157,92,255,.1); text-shadow:0 0 8px var(--purple); }
+.tb-global-btn .gb-pulse { position:absolute; top:5px; right:5px; width:5px; height:5px; border-radius:50%; background:var(--purple); box-shadow:0 0 8px var(--purple); animation:pulse-dot 1.6s infinite; }
+body.global-mode .tb-global-btn {
+  border-color:var(--cyan); color:var(--cyan);
+  background:linear-gradient(180deg, rgba(0,240,255,.16), rgba(0,194,212,.05));
+  box-shadow:0 0 26px rgba(0,240,255,.45), inset 0 0 18px rgba(0,240,255,.12);
+  text-shadow:0 0 10px var(--cyan);
+}
+body.global-mode .tb-global-btn .gb-ico { filter:drop-shadow(0 0 8px rgba(0,240,255,.9)); }
+body.global-mode .tb-global-btn .gb-pulse { background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+
+/* global event rail */
+.global-rail .ge-hint { font-size:9px; color:var(--dim); font-family:var(--font-mono); margin-left:auto; }
+.ge-btn.active { border-color:var(--cyan); background:rgba(0,240,255,.12); color:var(--cyan); box-shadow:0 0 18px rgba(0,240,255,.3); text-shadow:0 0 8px var(--cyan); }
+
+/* globe HUD overlays */
+.globe-hud {
+  position:absolute; z-index:6; pointer-events:none;
+  font-family:var(--font-mono); font-size:9px; letter-spacing:1px; line-height:1.9;
+  color:var(--text2);
+}
+.globe-hud.tl { top:12px; left:14px; }
+.globe-hud.tr { top:12px; right:14px; text-align:right; }
+.globe-hud b { color:var(--cyan); text-shadow:0 0 6px rgba(0,240,255,.4); }
+.globe-title {
+  position:absolute; bottom:74px; left:50%; transform:translateX(-50%);
+  text-align:center; z-index:6; pointer-events:none;
+}
+.gt-main { font-family:var(--font-display); font-size:15px; font-weight:900; letter-spacing:5px; color:var(--cyan); text-shadow:0 0 14px rgba(0,240,255,.5); }
+.gt-sub { font-family:var(--font-mono); font-size:8px; letter-spacing:3px; color:var(--muted); margin-top:3px; }
+#globe-tooltip {
+  position:absolute; z-index:40; pointer-events:none; display:none;
+  background:rgba(2,14,20,.95); border:1px solid var(--cyan);
+  padding:7px 11px; font-family:var(--font-mono); font-size:10px; line-height:1.6;
+  box-shadow:0 0 18px rgba(0,240,255,.3);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+}
+#globe-tooltip.show { display:block; }
+#globe-tooltip .gtt-name { color:var(--cyan); font-weight:700; font-size:11px; margin-bottom:3px; }
+#globe-tooltip .gtt-row { color:var(--muted); }
+#globe-tooltip .gtt-row b { color:var(--text2); font-weight:400; }
+
+/* hide topology chrome in global mode */
+body.global-mode .node { display:none !important; }
+body.global-mode .topo-corner { display:none !important; }
+body.global-mode #topo-wrap { cursor:grab; }
+body.global-mode #topo-wrap.grabbing { cursor:grabbing; }
+
 .tb-status {
   display:flex; align-items:center; gap:9px;
   padding:0 16px;
@@ -1099,6 +1160,11 @@ body.light .node-body { background:linear-gradient(150deg,#1b2740,#141f33); }
     </div>
   </div>
   <div class="tb-spacer"></div>
+  <button class="tb-global-btn" id="btn-global" onclick="toggleGlobalMode()">
+    <span class="gb-ico">🌐</span>
+    <span class="gb-txt">GLOBAL</span>
+    <span class="gb-pulse"></span>
+  </button>
   <div class="tb-tools">
 
     <!-- 📊 ANALÝZA -->
@@ -1185,6 +1251,22 @@ body.light .node-body { background:linear-gradient(150deg,#1b2740,#141f33); }
   <button class="sr-btn attack" data-sc="portscan" onclick="selectScenario('portscan',this)">🔎 Port Scan</button>
 </div>
 
+<!-- ═══════════ GLOBAL EVENT RAIL (shown only in global mode) ═══════════ -->
+<div class="scenario-rail global-rail" id="global-rail" style="display:none">
+  <span class="sr-group-label">🌍 Globální síť</span>
+  <button class="sr-btn ge-btn active" data-ge="normal" onclick="setGlobalEvent('normal',this)">🌊 Normální provoz</button>
+  <span class="sr-sep"></span>
+  <span class="sr-group-label">Incidenty</span>
+  <button class="sr-btn ge-btn attack" data-ge="ddos" onclick="setGlobalEvent('ddos',this)">💣 Globální DDoS</button>
+  <button class="sr-btn ge-btn attack" data-ge="worm" onclick="setGlobalEvent('worm',this)">🪱 Šíření červa</button>
+  <button class="sr-btn ge-btn attack" data-ge="hijack" onclick="setGlobalEvent('hijack',this)">📡 BGP Hijack</button>
+  <button class="sr-btn ge-btn" data-ge="cut" onclick="setGlobalEvent('cut',this)">✂️ Přerušení kabelu</button>
+  <button class="sr-btn ge-btn" data-ge="surge" onclick="setGlobalEvent('surge',this)">📈 Traffic Surge</button>
+  <span class="sr-sep"></span>
+  <button class="sr-btn ge-btn" onclick="globeResetView()">🎯 Vycentrovat</button>
+  <span class="ge-hint" id="ge-hint">táhni = otáčení · kolečko = zoom</span>
+</div>
+
 <!-- ═══════════ MAIN ═══════════ -->
 <div class="main">
   <!-- TOPOLOGY -->
@@ -1201,6 +1283,22 @@ body.light .node-body { background:linear-gradient(150deg,#1b2740,#141f33); }
       <div>MODE <b id="hud-mode">IDLE</b></div>
       <div>UPLINK <b id="hud-uplink">STABLE</b></div>
     </div>
+    <!-- GLOBE HUD (global mode) -->
+    <div class="globe-hud tl" id="globe-hud-tl" style="display:none">
+      <div>◈ GLOBAL NETWORK GRID</div>
+      <div>UZLY <b id="ghud-nodes">0</b> · LINKY <b id="ghud-links">0</b></div>
+      <div>AKTIVNÍ TOKY <b id="ghud-flows">0</b></div>
+    </div>
+    <div class="globe-hud tr" id="globe-hud-tr" style="display:none">
+      <div>EVENT <b id="ghud-event">NORMÁLNÍ</b></div>
+      <div>THREAT <b id="ghud-threat">LOW</b></div>
+      <div>LAT <b id="ghud-lat">0.0°</b> · LON <b id="ghud-lon">0.0°</b></div>
+    </div>
+    <div class="globe-title" id="globe-title" style="display:none">
+      <div class="gt-main">HOLOGRAPHIC EARTH</div>
+      <div class="gt-sub">critical network infrastructure · live telemetry</div>
+    </div>
+    <div id="globe-tooltip"></div>
     <div id="ddos-overlay"><div class="ddos-alert" id="ddos-alert">🔴 DDoS ÚTOK</div></div>
     <div id="defense-overlay">
       <div id="def-panel">
@@ -2168,6 +2266,7 @@ function initParticles(){ particles=[]; for(let i=0;i<46;i++) particles.push({x:
 function render(){
   if(!ctx) return;
   ctx.clearRect(0,0,W,H);
+  if(globalMode){ drawParticles(); renderGlobe(); return; }
   drawHexGrid();
   drawParticles();
   if(iso>0.01) drawGroundPlane();
@@ -2811,6 +2910,484 @@ function drawNodeDots(){
 
 function addFlow(a,b,color,speed,sz){ linkFlow.push({a,b,color,speed:speed||0.02,t:Math.random(),sz}); }
 function clearFlow(){ linkFlow=[]; }
+
+/* ═══════════════════════════════════════════════════════════
+   ░▒▓ GLOBAL MODE — HOLOGRAPHIC EARTH ▓▒░
+   ═══════════════════════════════════════════════════════════ */
+let globalMode=false;
+let globeYaw=-0.3, globeTilt=-0.42, globeSpin=0.0016;   // rotation state
+let globeDrag=false, gDragX=0, gDragY=0, gVelY=0;
+let globeZoom=1;
+let globePulses=[];
+let globalEvent='normal';
+let wormInfected=new Set(), wormTimer=null;
+let cutLink=-1;
+
+// ── real critical network hubs (city, lat, lon, tier 1=mega) ──
+const GLOBE_NODES=[
+  {n:'Ashburn',  cc:'US', lat:39.0, lon:-77.5, tier:1, note:'Data Center Alley (US-East)'},
+  {n:'San Jose', cc:'US', lat:37.3, lon:-121.9,tier:1, note:'Silicon Valley / PAIX'},
+  {n:'Los Angeles',cc:'US',lat:34.0,lon:-118.2,tier:2, note:'Pacific cable landing'},
+  {n:'New York', cc:'US', lat:40.7, lon:-74.0, tier:1, note:'NYIIX'},
+  {n:'Seattle',  cc:'US', lat:47.6, lon:-122.3,tier:3, note:'SIX'},
+  {n:'Miami',    cc:'US', lat:25.8, lon:-80.2, tier:2, note:'NAP of Americas'},
+  {n:'São Paulo',cc:'BR', lat:-23.5,lon:-46.6, tier:2, note:'IX.br — largest LatAm'},
+  {n:'London',   cc:'GB', lat:51.5, lon:-0.1,  tier:1, note:'LINX — Europe gateway'},
+  {n:'Amsterdam',cc:'NL', lat:52.3, lon:4.9,   tier:1, note:'AMS-IX'},
+  {n:'Frankfurt',cc:'DE', lat:50.1, lon:8.7,   tier:1, note:'DE-CIX — world #1 IXP'},
+  {n:'Paris',    cc:'FR', lat:48.9, lon:2.4,   tier:2, note:'France-IX'},
+  {n:'Praha',    cc:'CZ', lat:50.1, lon:14.4,  tier:2, note:'NIX.CZ 🇨🇿'},
+  {n:'Marseille',cc:'FR', lat:43.3, lon:5.4,   tier:2, note:'cable hub → Asia/Africa'},
+  {n:'Moscow',   cc:'RU', lat:55.8, lon:37.6,  tier:3, note:'MSK-IX'},
+  {n:'Dubai',    cc:'AE', lat:25.2, lon:55.3,  tier:2, note:'UAE-IX — Gulf hub'},
+  {n:'Mumbai',   cc:'IN', lat:19.1, lon:72.9,  tier:1, note:'cable landing — India'},
+  {n:'Singapore',cc:'SG', lat:1.35, lon:103.8, tier:1, note:'SGIX — SE Asia core'},
+  {n:'Hong Kong',cc:'HK', lat:22.3, lon:114.2, tier:1, note:'HKIX'},
+  {n:'Tokyo',    cc:'JP', lat:35.7, lon:139.7, tier:1, note:'JPIX / JPNAP'},
+  {n:'Seoul',    cc:'KR', lat:37.6, lon:127.0, tier:2, note:'KINX'},
+  {n:'Sydney',   cc:'AU', lat:-33.9,lon:151.2, tier:2, note:'IX Australia'},
+  {n:'Johannesburg',cc:'ZA',lat:-26.2,lon:28.0,tier:3, note:'NAPAfrica'},
+  {n:'Lagos',    cc:'NG', lat:6.5,  lon:3.4,   tier:3, note:'IXPN — West Africa'},
+  {n:'Nairobi',  cc:'KE', lat:-1.3, lon:36.8,  tier:3, note:'KIXP — East Africa'},
+];
+// backbone / submarine-cable style links (indices into GLOBE_NODES)
+const GLOBE_LINKS=[
+  [0,3],[0,1],[1,2],[1,4],[3,7],[0,7],[2,18],[4,18],[3,5],[5,6],[6,7],
+  [7,8],[8,9],[9,10],[9,11],[10,12],[8,9],[7,9],[12,14],[12,22],[12,23],
+  [9,13],[13,15],[14,15],[15,16],[16,17],[17,18],[18,19],[16,20],[2,16],
+  [16,15],[21,23],[21,6],[22,21],[11,9],[10,11],[1,16],[17,19],[6,22],
+];
+
+// ── simplified continent polygons [lon,lat] for the dotted earth ──
+const GLOBE_LAND=[
+  // North America
+  [[-168,66],[-162,70],[-130,70],[-122,60],[-95,70],[-82,73],[-62,66],[-56,52],[-66,48],[-70,42],[-74,40],[-81,31],[-80,25],[-90,29],[-97,26],[-107,23],[-110,30],[-117,32],[-124,40],[-123,48],[-130,55],[-140,60],[-150,59],[-165,60]],
+  // Central America
+  [[-97,26],[-92,18],[-87,16],[-83,10],[-80,9],[-83,13],[-88,16],[-92,18]],
+  // South America
+  [[-80,9],[-78,2],[-80,-4],[-75,-14],[-70,-18],[-71,-30],[-73,-40],[-74,-50],[-68,-55],[-64,-50],[-62,-40],[-58,-34],[-57,-25],[-48,-25],[-40,-20],[-35,-8],[-35,-5],[-50,0],[-52,5],[-62,9],[-78,10]],
+  // Greenland
+  [[-45,60],[-50,66],[-48,72],[-30,72],[-22,70],[-30,64],[-42,60]],
+  // Africa
+  [[-17,15],[-16,22],[-10,30],[0,34],[10,37],[11,33],[20,32],[32,31],[34,28],[43,12],[51,12],[48,4],[42,-2],[40,-12],[35,-20],[25,-34],[18,-34],[12,-17],[8,-1],[5,5],[-7,5],[-12,8],[-17,15]],
+  // Madagascar
+  [[43,-16],[49,-15],[50,-22],[45,-25]],
+  // Europe
+  [[-10,36],[-9,43],[-2,44],[-2,48],[-5,48],[-4,52],[3,51],[8,54],[11,58],[6,61],[10,64],[18,69],[28,71],[30,67],[38,66],[40,58],[34,52],[30,46],[28,41],[22,40],[14,40],[18,42],[12,44],[8,44],[3,43],[-3,36]],
+  // UK + Ireland
+  [[-6,50],[-4,53],[-6,58],[-2,57],[1,52],[-2,50]],
+  // Iceland
+  [[-24,65],[-14,66],[-14,64],[-22,63]],
+  // Asia (main mass)
+  [[40,58],[55,60],[70,66],[90,72],[110,74],[140,73],[160,70],[170,66],[180,64],[170,60],[160,58],[145,55],[142,48],[130,43],[122,40],[122,30],[109,22],[105,10],[100,8],[95,16],[90,22],[88,27],[80,15],[77,8],[73,18],[67,25],[57,25],[48,30],[52,38],[48,42],[55,48],[48,52],[42,52]],
+  // Arabian peninsula
+  [[35,30],[43,30],[52,25],[58,23],[52,17],[45,13],[40,16],[35,22]],
+  // India tip already in asia; SE Asia islands
+  [[95,6],[103,2],[110,-2],[120,-5],[132,-2],[141,-4],[150,-9],[135,-3],[118,-8],[105,-7],[98,2]],
+  // Japan
+  [[130,31],[135,34],[140,36],[142,41],[141,45],[138,37],[133,33]],
+  // Philippines
+  [[120,6],[125,8],[126,13],[122,18],[120,13],[119,9]],
+  // Australia
+  [[114,-22],[113,-26],[115,-34],[122,-34],[130,-32],[138,-35],[147,-38],[150,-37],[153,-28],[146,-19],[142,-11],[135,-12],[130,-14],[122,-18]],
+  // New Zealand
+  [[166,-46],[171,-44],[174,-41],[178,-38],[173,-41],[168,-44]],
+  // New Guinea
+  [[131,-1],[141,-3],[150,-9],[144,-7],[137,-3]],
+];
+
+// precompute land dots (lat/lon) once
+let landDots=[];
+function buildLandDots(){
+  landDots=[];
+  const step=2.6;
+  for(let lat=-80; lat<=82; lat+=step){
+    // longitude density scaled by cos(lat) so spacing is even on sphere
+    const lonStep=step/Math.max(0.25,Math.cos(lat*Math.PI/180));
+    for(let lon=-180; lon<=180; lon+=lonStep){
+      if(pointInLand(lon,lat)) landDots.push([lat,lon]);
+    }
+  }
+}
+function pointInLand(lon,lat){
+  for(const poly of GLOBE_LAND){ if(pnpoly(poly,lon,lat)) return true; }
+  return false;
+}
+function pnpoly(poly,x,y){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+    if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+
+// ── 3D projection ──
+function latLon3D(lat,lon){
+  const phi=lat*Math.PI/180, th=lon*Math.PI/180;
+  return [Math.cos(phi)*Math.sin(th), Math.sin(phi), Math.cos(phi)*Math.cos(th)];
+}
+function rotY(p,a){ const c=Math.cos(a),s=Math.sin(a); return [p[0]*c+p[2]*s, p[1], -p[0]*s+p[2]*c]; }
+function rotX(p,a){ const c=Math.cos(a),s=Math.sin(a); return [p[0], p[1]*c-p[2]*s, p[1]*s+p[2]*c]; }
+function globeCenter(){ return [W*0.5, H*0.52]; }
+function globeRadius(){ return Math.min(W,H)*0.34*globeZoom; }
+// returns [sx, sy, visible(z>0 front), z]
+function projGlobe(lat,lon,rr){
+  let p=latLon3D(lat,lon);
+  if(rr) p=[p[0]*rr,p[1]*rr,p[2]*rr];
+  p=rotY(p,globeYaw); p=rotX(p,globeTilt);
+  const [cx,cy]=globeCenter(), R=globeRadius();
+  return [cx+p[0]*R, cy-p[1]*R, p[2]>0, p[2]];
+}
+
+/* ── MAIN GLOBE RENDER ── */
+function renderGlobe(){
+  const [cx,cy]=globeCenter(), R=globeRadius();
+  // atmosphere outer glow
+  let ga=ctx.createRadialGradient(cx,cy,R*0.82,cx,cy,R*1.35);
+  ga.addColorStop(0,'rgba(0,240,255,0.0)'); ga.addColorStop(0.55,'rgba(0,180,255,0.10)');
+  ga.addColorStop(0.8,'rgba(0,240,255,0.14)'); ga.addColorStop(1,'rgba(0,240,255,0)');
+  ctx.fillStyle=ga; ctx.beginPath(); ctx.arc(cx,cy,R*1.35,0,7); ctx.fill();
+  // dark sphere body (ocean) with subtle inner gradient
+  let gb=ctx.createRadialGradient(cx-R*0.3,cy-R*0.3,R*0.1,cx,cy,R);
+  gb.addColorStop(0,'rgba(0,40,55,0.55)'); gb.addColorStop(0.7,'rgba(0,20,32,0.5)'); gb.addColorStop(1,'rgba(0,8,16,0.6)');
+  ctx.fillStyle=gb; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
+
+  // graticule (meridians + parallels) — back then handled by depth
+  drawGraticule(false); // back
+  drawLandDots(false);  // back hemisphere (dim)
+  drawGlobeArcs(false); // back arcs
+  drawGraticule(true);  // front
+  drawLandDots(true);   // front hemisphere (bright)
+  drawGlobeArcs(true);  // front arcs (blood flow)
+  drawGlobePulses();
+  drawGlobeNodes();
+
+  // crisp rim
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,7);
+  ctx.strokeStyle='rgba(0,240,255,0.5)'; ctx.lineWidth=1.5; ctx.shadowBlur=14; ctx.shadowColor='#00f0ff'; ctx.stroke(); ctx.shadowBlur=0;
+
+  // HUD ring (rotating ticks)
+  drawGlobeHudRing(cx,cy,R);
+  // spin unless dragging
+  if(!globeDrag){ globeYaw += globeSpin + gVelY; gVelY*=0.94; }
+  updateGlobeHud();
+}
+
+function drawGraticule(front){
+  const R=globeRadius();
+  ctx.lineWidth=0.6;
+  // meridians
+  for(let lon=-180; lon<180; lon+=20){
+    ctx.beginPath(); let started=false;
+    for(let lat=-90; lat<=90; lat+=4){
+      const [x,y,vis]=projGlobe(lat,lon,1);
+      if(vis!==front){ started=false; continue; }
+      if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=front?'rgba(0,240,255,0.10)':'rgba(0,240,255,0.035)'; ctx.stroke();
+  }
+  // parallels
+  for(let lat=-80; lat<=80; lat+=20){
+    ctx.beginPath(); let started=false;
+    for(let lon=-180; lon<=180; lon+=4){
+      const [x,y,vis]=projGlobe(lat,lon,1);
+      if(vis!==front){ started=false; continue; }
+      if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=front?'rgba(0,240,255,0.10)':'rgba(0,240,255,0.035)'; ctx.stroke();
+  }
+}
+
+function drawLandDots(front){
+  const R=globeRadius();
+  const sz=Math.max(0.8, R*0.006);
+  for(const [lat,lon] of landDots){
+    const [x,y,vis,z]=projGlobe(lat,lon,1);
+    if(vis!==front) continue;
+    if(front){
+      const a=0.35+0.5*z;   // brighter near center
+      ctx.fillStyle=`rgba(0,240,255,${a})`;
+      ctx.beginPath(); ctx.arc(x,y,sz,0,7); ctx.fill();
+    } else {
+      ctx.fillStyle='rgba(0,150,180,0.08)';
+      ctx.beginPath(); ctx.arc(x,y,sz*0.8,0,7); ctx.fill();
+    }
+  }
+}
+
+// great-circle arc points between two nodes (slerp), lifted above surface
+function arcPoints(a,b,lift,segs){
+  const A=latLon3D(GLOBE_NODES[a].lat,GLOBE_NODES[a].lon);
+  const B=latLon3D(GLOBE_NODES[b].lat,GLOBE_NODES[b].lon);
+  let dot=A[0]*B[0]+A[1]*B[1]+A[2]*B[2]; dot=Math.max(-1,Math.min(1,dot));
+  const Ω=Math.acos(dot), sinΩ=Math.sin(Ω)||1e-6;
+  const pts=[]; const n=segs||36;
+  for(let i=0;i<=n;i++){ const t=i/n;
+    const s0=Math.sin((1-t)*Ω)/sinΩ, s1=Math.sin(t*Ω)/sinΩ;
+    let x=A[0]*s0+B[0]*s1, y=A[1]*s0+B[1]*s1, z=A[2]*s0+B[2]*s1;
+    const r=1+lift*Math.sin(t*Math.PI);           // bow outward
+    const len=Math.hypot(x,y,z)||1; x=x/len*r; y=y/len*r; z=z/len*r;
+    pts.push([x,y,z]);
+  }
+  return pts;
+}
+function proj3(p){ let q=rotY(p,globeYaw); q=rotX(q,globeTilt); const [cx,cy]=globeCenter(),R=globeRadius(); return [cx+q[0]*R, cy-q[1]*R, q[2]>0, q[2]]; }
+
+function linkState(i){
+  const [a,b]=GLOBE_LINKS[i];
+  if(globalEvent==='cut' && i===cutLink) return {col:'#ff2d55', heat:0, dead:true};
+  if(globalEvent==='ddos' && (b===ddosTarget||a===ddosTarget)) return {col:'#ff2d55', heat:1};
+  if(globalEvent==='worm' && (wormInfected.has(a)&&wormInfected.has(b))) return {col:'#ff2d55', heat:1};
+  if(globalEvent==='hijack' && (a===hijackNode||b===hijackNode)) return {col:'#ffd84d', heat:0.8};
+  if(globalEvent==='surge'){ const h=0.5+0.5*Math.sin(animT*0.7+i); return {col:heatColor(0.6+0.4*h), heat:0.6+0.4*h}; }
+  return {col:'#00d9ff', heat:0.25};
+}
+
+function drawGlobeArcs(front){
+  GLOBE_LINKS.forEach((lk,i)=>{
+    const st=linkState(i);
+    const pts=arcPoints(lk[0],lk[1],0.16,30);
+    ctx.beginPath(); let started=false; let anyFront=false;
+    for(const p of pts){ const [x,y,vis]=proj3(p); if(vis!==front){ started=false; continue; } anyFront=true;
+      if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y); }
+    if(!anyFront) return;
+    if(st.dead){ ctx.strokeStyle='rgba(255,45,85,0.3)'; ctx.setLineDash([3,4]); ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]); return; }
+    const base= front?0.22:0.06;
+    const breathe=0.5+0.5*Math.sin(animT*1.1+i*0.7);
+    ctx.strokeStyle=hexA(st.col, base + st.heat*0.3*breathe);
+    ctx.lineWidth=front?(0.8+st.heat*1.6):0.6;
+    ctx.shadowBlur=front?(4+st.heat*8):0; ctx.shadowColor=st.col;
+    ctx.stroke(); ctx.shadowBlur=0;
+  });
+}
+
+/* ── BLOOD FLOW PULSES ── */
+function spawnGlobePulse(i,opt){
+  const [a,b]=GLOBE_LINKS[i]; opt=opt||{};
+  globePulses.push({i, t:0, dir:opt.dir||1, col:opt.col||'#00f0ff', sp:opt.sp||(0.006+Math.random()*0.004), w:opt.w||2, heat:opt.heat||0.3});
+}
+function drawGlobePulses(){
+  globePulses=globePulses.filter(pl=>{
+    pl.t+=pl.sp;
+    if(pl.t>=1) return false;
+    const lk=GLOBE_LINKS[pl.i]; if(!lk) return false;
+    if(globalEvent==='cut' && pl.i===cutLink) return false;
+    const pts=arcPoints(lk[0],lk[1],0.16,30);
+    // sample pulse position + a short comet trail
+    const tt = pl.dir>0 ? pl.t : 1-pl.t;
+    const trail=7;
+    for(let k=0;k<trail;k++){
+      const tk=tt - pl.dir*k*0.025; if(tk<0||tk>1) continue;
+      const idx=tk*(pts.length-1); const i0=Math.floor(idx); const f=idx-i0;
+      const p0=pts[i0], p1=pts[Math.min(pts.length-1,i0+1)];
+      const p=[p0[0]+(p1[0]-p0[0])*f, p0[1]+(p1[1]-p0[1])*f, p0[2]+(p1[2]-p0[2])*f];
+      const [x,y,vis]=proj3(p); if(!vis) continue;
+      const fade=(1-k/trail);
+      const r=pl.w*fade*(1+0.5*Math.sin(animT*8+pl.t*20));  // organic pulsing width
+      ctx.beginPath(); ctx.arc(x,y, Math.max(0.6,r),0,7);
+      ctx.fillStyle=hexA(pl.col, 0.85*fade); ctx.shadowBlur=8*fade; ctx.shadowColor=pl.col; ctx.fill();
+    }
+    ctx.shadowBlur=0;
+    return true;
+  });
+}
+
+function drawGlobeNodes(){
+  // sort by z so front nodes draw last
+  const order=GLOBE_NODES.map((_,i)=>i);
+  GLOBE_NODES.forEach((nd,i)=>{ const [,,,z]=projGlobe(nd.lat,nd.lon,1); nd._z=z; });
+  order.sort((a,b)=>GLOBE_NODES[a]._z-GLOBE_NODES[b]._z);
+  order.forEach(i=>{
+    const nd=GLOBE_NODES[i];
+    const [x,y,vis,z]=projGlobe(nd.lat,nd.lon,1.0);
+    if(!vis) return;
+    let col='#00f0ff', hot=false;
+    if(globalEvent==='ddos' && i===ddosTarget){ col='#ff2d55'; hot=true; }
+    else if(globalEvent==='ddos' && ddosSources.includes(i)){ col='#ff9838'; }
+    else if(globalEvent==='worm' && wormInfected.has(i)){ col='#ff2d55'; hot=true; }
+    else if(globalEvent==='hijack' && i===hijackNode){ col='#ffd84d'; hot=true; }
+    const base=nd.tier===1?3.4:nd.tier===2?2.6:2.0;
+    const pulse=hot?(1+0.6*Math.sin(animT*8)):(1+0.25*Math.sin(animT*2.5+i));
+    // glow ring for tier-1 / hot
+    if(nd.tier===1||hot){
+      ctx.beginPath(); ctx.arc(x,y,(base+5)*pulse,0,7);
+      ctx.strokeStyle=hexA(col,0.3); ctx.lineWidth=1; ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(x,y,base*pulse,0,7);
+    ctx.fillStyle=col; ctx.shadowBlur=hot?16:10; ctx.shadowColor=col; ctx.fill(); ctx.shadowBlur=0;
+    nd._sx=x; nd._sy=y; nd._vis=true;
+    // label for tier-1 + hot (only front & not too close to edge)
+    if((nd.tier===1||hot) && z>0.25){
+      ctx.font='9px "Share Tech Mono", monospace'; ctx.fillStyle=hexA(col,0.9);
+      ctx.textAlign='left'; ctx.fillText(nd.n, x+7, y+3); ctx.textAlign='left';
+    }
+  });
+  GLOBE_NODES.forEach(nd=>{ if(!nd._vis) { nd._sx=nd._sy=null; } nd._vis=false; });
+}
+
+function drawGlobeHudRing(cx,cy,R){
+  const rr=R*1.12;
+  ctx.save();
+  // rotating outer ticks
+  for(let i=0;i<72;i++){
+    const a=(i/72)*Math.PI*2 + animT*0.05;
+    const long=(i%9===0);
+    const r1=rr, r2=rr+(long?9:4);
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*r1, cy+Math.sin(a)*r1);
+    ctx.lineTo(cx+Math.cos(a)*r2, cy+Math.sin(a)*r2);
+    ctx.strokeStyle=long?'rgba(0,240,255,0.5)':'rgba(0,240,255,0.2)'; ctx.lineWidth=long?1.4:0.8; ctx.stroke();
+  }
+  // bracket arcs
+  ctx.strokeStyle='rgba(0,240,255,0.35)'; ctx.lineWidth=1.5;
+  [[-0.4,0.4],[Math.PI-0.4,Math.PI+0.4]].forEach(([s,e])=>{ ctx.beginPath(); ctx.arc(cx,cy,rr+16,s,e); ctx.stroke(); });
+  ctx.restore();
+}
+
+function updateGlobeHud(){
+  const lonC=(-globeYaw*180/Math.PI)%360;
+  const el=id=>document.getElementById(id);
+  if(el('ghud-nodes')) el('ghud-nodes').textContent=GLOBE_NODES.length;
+  if(el('ghud-links')) el('ghud-links').textContent=GLOBE_LINKS.length;
+  if(el('ghud-flows')) el('ghud-flows').textContent=globePulses.length;
+  if(el('ghud-lon')) el('ghud-lon').textContent=((((lonC+180)%360)-180)).toFixed(1)+'°';
+  if(el('ghud-lat')) el('ghud-lat').textContent=(-globeTilt*180/Math.PI).toFixed(1)+'°';
+}
+
+/* ── GLOBAL EVENTS ── */
+let ddosTarget=9, ddosSources=[], hijackNode=13;
+let globePulseTimer=null;
+function startGlobePulses(){
+  if(globePulseTimer) return;
+  globePulseTimer=setInterval(()=>{
+    if(!globalMode) return;
+    if(globePulses.length>120) return;
+    if(globalEvent==='normal'||globalEvent==='surge'){
+      // ambient blood flow on random links
+      const k=Math.floor(Math.random()*GLOBE_LINKS.length);
+      const st=linkState(k);
+      spawnGlobePulse(k,{dir:Math.random()<0.5?1:-1, col:st.col, sp:0.005+Math.random()*0.004, w:1.6+st.heat, heat:st.heat});
+    } else if(globalEvent==='ddos'){
+      // flood toward target
+      GLOBE_LINKS.forEach((lk,i)=>{ if((lk[0]===ddosTarget||lk[1]===ddosTarget) && Math.random()<0.5){
+        const dir=lk[1]===ddosTarget?1:-1;
+        spawnGlobePulse(i,{dir, col:'#ff2d55', sp:0.012+Math.random()*0.01, w:2.4, heat:1}); } });
+      // some ambient elsewhere
+      if(Math.random()<0.3){ const k=Math.floor(Math.random()*GLOBE_LINKS.length); spawnGlobePulse(k,{col:'#00a0c0',sp:0.006,w:1.2,heat:0.2}); }
+    } else if(globalEvent==='worm'){
+      // pulses between infected nodes
+      GLOBE_LINKS.forEach((lk,i)=>{ if(wormInfected.has(lk[0])&&wormInfected.has(lk[1]) && Math.random()<0.4){
+        spawnGlobePulse(i,{dir:Math.random()<0.5?1:-1, col:'#ff2d55', sp:0.009, w:2, heat:1}); } });
+    } else if(globalEvent==='hijack'){
+      GLOBE_LINKS.forEach((lk,i)=>{ if((lk[0]===hijackNode||lk[1]===hijackNode) && Math.random()<0.4){
+        spawnGlobePulse(i,{dir:lk[1]===hijackNode?1:-1, col:'#ffd84d', sp:0.01, w:2, heat:0.8}); } });
+    } else if(globalEvent==='cut'){
+      const k=Math.floor(Math.random()*GLOBE_LINKS.length);
+      if(k!==cutLink) spawnGlobePulse(k,{col:'#00f0ff',sp:0.006,w:1.6,heat:0.4});
+    }
+  }, 120);
+}
+function stopGlobePulses(){ clearInterval(globePulseTimer); globePulseTimer=null; }
+
+function setGlobalEvent(ev,btn){
+  globalEvent=ev;
+  document.querySelectorAll('.ge-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  clearTimeout(wormTimer); wormInfected.clear();
+  const threatEl=document.getElementById('ghud-threat'), evEl=document.getElementById('ghud-event');
+  const setThreat=(t,c)=>{ if(threatEl){ threatEl.textContent=t; threatEl.style.color=c; } };
+  const names={normal:'NORMÁLNÍ',ddos:'GLOBAL DDoS',worm:'WORM SPREAD',hijack:'BGP HIJACK',cut:'CABLE CUT',surge:'TRAFFIC SURGE'};
+  if(evEl) evEl.textContent=names[ev]||ev;
+  globePulses=[];
+  if(ev==='normal'){ setThreat('LOW','var(--green)'); setStatus('🌍 Globální síť — normální provoz'); toast('🌊 Normální globální provoz'); }
+  else if(ev==='ddos'){ ddosTarget=9; ddosSources=[0,2,4,6,20,21,22,23,15,19]; focusGlobe(9);
+    setThreat('CRITICAL','var(--red)'); setStatus('🌍 Globální DDoS útok','attack'); toast('💣 Globální DDoS → Frankfurt (DE-CIX)'); }
+  else if(ev==='worm'){ wormInfected=new Set([18]); spreadWorm(); focusGlobe(18);
+    setThreat('HIGH','var(--red)'); setStatus('🌍 Šíření červa v síti','attack'); toast('🪱 Červ se šíří z Tokia…'); }
+  else if(ev==='hijack'){ hijackNode=13; focusGlobe(13);
+    setThreat('HIGH','var(--orange)'); setStatus('🌍 BGP Hijack — přesměrování','attack'); toast('📡 BGP Hijack přes Moskvu'); }
+  else if(ev==='cut'){ cutLink=11; focusGlobe(7);
+    setThreat('MEDIUM','var(--yellow)'); setStatus('🌍 Přerušený kabel — rerouting'); toast('✂️ Transatlantický kabel přerušen'); }
+  else if(ev==='surge'){ setThreat('ELEVATED','var(--orange)'); setStatus('🌍 Traffic surge'); toast('📈 Globální traffic surge'); }
+  updateGlobeHud();
+}
+function spreadWorm(){
+  // each tick infect neighbors of infected nodes
+  const neighbors=i=>{ const out=[]; GLOBE_LINKS.forEach(lk=>{ if(lk[0]===i)out.push(lk[1]); if(lk[1]===i)out.push(lk[0]); }); return out; };
+  wormTimer=setTimeout(function grow(){
+    if(globalEvent!=='worm') return;
+    const cur=[...wormInfected];
+    cur.forEach(i=> neighbors(i).forEach(nb=>{ if(Math.random()<0.5) wormInfected.add(nb); }));
+    const thr=document.getElementById('ghud-threat');
+    if(wormInfected.size>=GLOBE_NODES.length){ if(thr){thr.textContent='PANDEMIC';} toast('🪱 Červ zasáhl celou síť!'); return; }
+    wormTimer=setTimeout(grow, 1400);
+  }, 1400);
+}
+function globeResetView(){ globeYaw=-0.3; globeTilt=-0.42; globeZoom=1; gVelY=0; toast('🎯 Pohled vycentrován'); }
+// rotate globe so a node faces the camera (longitude centered, gentle tilt toward its latitude)
+function focusGlobe(idx){
+  const nd=GLOBE_NODES[idx]; if(!nd) return;
+  globeYaw = -nd.lon*Math.PI/180;
+  // tilt = +latitude brings the node down toward screen centre (partial, for a natural angle)
+  globeTilt = Math.max(-0.9, Math.min(0.9, nd.lat*Math.PI/180*0.72));
+  gVelY=0;
+}
+
+/* ── interaction (drag + wheel + hover) ── */
+function setupGlobe(){
+  const wrap=document.getElementById('topo-wrap');
+  wrap.addEventListener('mousedown',e=>{ if(!globalMode) return; globeDrag=true; gDragX=e.clientX; gDragY=e.clientY; wrap.classList.add('grabbing'); });
+  window.addEventListener('mousemove',e=>{ if(!globalMode) return;
+    if(globeDrag){ const dx=e.clientX-gDragX, dy=e.clientY-gDragY; gDragX=e.clientX; gDragY=e.clientY;
+      globeYaw+=dx*0.006; gVelY=dx*0.0006;
+      globeTilt=Math.max(-1.3,Math.min(1.3,globeTilt - dy*0.006)); }
+    else globeHover(e);
+  });
+  window.addEventListener('mouseup',()=>{ if(globeDrag){ globeDrag=false; wrap.classList.remove('grabbing'); } });
+  wrap.addEventListener('wheel',e=>{ if(!globalMode) return; e.preventDefault(); globeZoom=Math.max(0.7,Math.min(2.2, globeZoom - e.deltaY*0.0012)); },{passive:false});
+}
+function globeHover(e){
+  const tip=document.getElementById('globe-tooltip'); const wrap=document.getElementById('topo-wrap').getBoundingClientRect();
+  const mx=(e.clientX-wrap.left)*(W/wrap.width), my=(e.clientY-wrap.top)*(H/wrap.height);
+  let found=null;
+  for(const nd of GLOBE_NODES){ if(nd._sx==null) continue; if(Math.hypot(mx-nd._sx,my-nd._sy)<12){ found=nd; break; } }
+  if(found){ tip.classList.add('show');
+    tip.innerHTML=`<div class="gtt-name">📡 ${found.n}, ${found.cc}</div><div class="gtt-row">${found.note}</div><div class="gtt-row">LAT <b>${found.lat.toFixed(1)}</b> · LON <b>${found.lon.toFixed(1)}</b> · Tier <b>${found.tier}</b></div>`;
+    tip.style.left=(e.clientX-wrap.left+14)+'px'; tip.style.top=(e.clientY-wrap.top-10)+'px';
+  } else tip.classList.remove('show');
+}
+
+/* ── toggle global mode ── */
+function toggleGlobalMode(){
+  globalMode=!globalMode;
+  document.body.classList.toggle('global-mode',globalMode);
+  const show=globalMode?'':'none', hide=globalMode?'none':'';
+  // swap rails
+  document.getElementById('scenario-rail').style.display=hide;
+  document.getElementById('global-rail').style.display=globalMode?'flex':'none';
+  // globe HUD
+  ['globe-hud-tl','globe-hud-tr','globe-title'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=show; });
+  // hide 2D-only overlays
+  if(globalMode){
+    document.getElementById('live-stats').classList.remove('show');
+    document.getElementById('traceroute-panel').classList.remove('show');
+    document.getElementById('banner-container').innerHTML='';
+    if(running){ resetSim(); }
+    if(landDots.length===0) buildLandDots();
+    startGlobePulses();
+    setGlobalEvent('normal', document.querySelector('.ge-btn[data-ge=normal]'));
+    setStatus('🌍 GLOBAL MODE aktivní');
+    addLog('🌍 GLOBAL MODE — holografická Země online','#b47bff');
+    addLog('Reálné uzly: DE-CIX, AMS-IX, LINX, Ashburn, Singapore, Tokyo, Praha…','#00f0ff');
+  } else {
+    stopGlobePulses(); globePulses=[];
+    document.getElementById('globe-tooltip').classList.remove('show');
+    setStatus('Připraven');
+    if(statsVisible) document.getElementById('live-stats').classList.add('show');
+  }
+  const b=document.getElementById('btn-global'); if(b) b.querySelector('.gb-txt').textContent=globalMode?'2D SÍŤ':'GLOBAL';
+}
 
 /* ═══════════════════════════════════════════════════════════
    NODE DOM
@@ -3993,6 +4570,8 @@ window.addEventListener('load',()=>{
   startLoop();
   updateTopMetrics();
   syncMenuChecks();
+  buildLandDots();
+  setupGlobe();
   addLog('◈ NET-SIM v5 · HOLO — jádro online','#00f0ff');
   addLog('Topologie: LAN-A (10.0.1.0/24) ↔ NET ↔ LAN-B (10.0.2.0/24)','#2d9bff');
   addLog('💡 Terminál: konfiguruj zařízení Cisco příkazy — změny ovlivní simulaci','#b47bff');
