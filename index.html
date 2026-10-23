@@ -415,6 +415,42 @@ body.global-mode .topo-corner { display:none !important; }
 body.global-mode #topo-wrap { cursor:grab; }
 body.global-mode #topo-wrap.grabbing { cursor:grabbing; }
 
+/* ── LOCAL SIM button (bottom-left, amber, color-distinct) ── */
+.btn-localsim {
+  display:flex; align-items:center; gap:7px;
+  padding:7px 16px; cursor:pointer; white-space:nowrap;
+  font-family:var(--font-display); font-size:12px; font-weight:700; letter-spacing:2px;
+  border:1px solid var(--orange); color:var(--orange);
+  background:linear-gradient(180deg, rgba(255,152,56,.14), rgba(255,152,56,.03));
+  transition:all .2s;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  box-shadow:0 0 16px rgba(255,152,56,.2), inset 0 0 14px rgba(255,152,56,.06);
+}
+.btn-localsim .ls-ico { font-size:15px; filter:drop-shadow(0 0 6px rgba(255,152,56,.8)); }
+.btn-localsim:hover { color:#ffc07a; border-color:#ffb060; box-shadow:0 0 26px rgba(255,152,56,.4), inset 0 0 18px rgba(255,152,56,.12); text-shadow:0 0 8px var(--orange); }
+.btn-localsim.active {
+  border-color:var(--green); color:var(--green);
+  background:linear-gradient(180deg, rgba(0,255,200,.14), rgba(0,255,200,.03));
+  box-shadow:0 0 22px rgba(0,255,200,.35), inset 0 0 16px rgba(0,255,200,.1); text-shadow:0 0 8px var(--green);
+}
+.btn-localsim.active .ls-ico { filter:drop-shadow(0 0 6px rgba(0,255,200,.8)); }
+.ctrl-sep { width:1px; height:24px; background:linear-gradient(180deg,transparent,var(--border2),transparent); margin:0 4px; }
+
+/* building view: declutter device labels */
+body.building-view .node-ip { display:none; }
+body.building-view .node-label { font-size:9px; opacity:.9; text-shadow:0 0 6px rgba(0,0,0,.95),0 0 8px rgba(0,180,210,.5); }
+body.building-view .node-body { width:38px; height:38px; font-size:16px; }
+body.building-view #topo-wrap { cursor:grab; }
+body.building-view #topo-wrap.grabbing { cursor:grabbing; }
+
+/* building scene title */
+.building-title {
+  position:absolute; bottom:74px; left:50%; transform:translateX(-50%);
+  text-align:center; z-index:6; pointer-events:none;
+}
+.building-title .bt-main { font-family:var(--font-display); font-size:14px; font-weight:900; letter-spacing:4px; color:var(--cyan); text-shadow:0 0 14px rgba(0,240,255,.5); }
+.building-title .bt-sub { font-family:var(--font-mono); font-size:8px; letter-spacing:3px; color:var(--muted); margin-top:3px; }
+
 .tb-status {
   display:flex; align-items:center; gap:9px;
   padding:0 16px;
@@ -1202,7 +1238,8 @@ body.light .node-body { background:linear-gradient(150deg,#1b2740,#141f33); }
       <button class="tb-menu-btn" onclick="toggleMenu('zobrazeni',event)"><span class="ico">👁️</span>Zobrazení<span class="caret">▾</span></button>
       <div class="tb-dropdown">
         <div class="tb-dd-label">Pohled</div>
-        <div class="tb-item toggle" id="dd-iso" onclick="toggleIso()"><span class="ico">🧊</span>Izometrie 2.5D<span class="chk"></span></div>
+        <div class="tb-item toggle" id="dd-buildings" onclick="toggleLocalStyle()"><span class="ico">🏢</span>Budovy (hologram)<span class="chk on"></span></div>
+        <div class="tb-item toggle" id="dd-iso" onclick="toggleIso()"><span class="ico">🧊</span>Izometrie 2.5D (schéma)<span class="chk"></span></div>
         <div class="tb-item toggle" id="dd-grid" onclick="toggleGrid()"><span class="ico">⬢</span>Hex grid<span class="chk on"></span></div>
         <div class="tb-dd-sep"></div>
         <div class="tb-dd-label">Vrstvy</div>
@@ -1298,6 +1335,10 @@ body.light .node-body { background:linear-gradient(150deg,#1b2740,#141f33); }
       <div class="gt-main">HOLOGRAPHIC EARTH</div>
       <div class="gt-sub">critical network infrastructure · live telemetry</div>
     </div>
+    <div class="building-title" id="building-title" style="display:none">
+      <div class="bt-main">LOCAL INFRASTRUCTURE</div>
+      <div class="bt-sub">holographic cutaway · táhni = obleť kamerou · kolečko = zoom · 2× klik = reset</div>
+    </div>
     <div id="globe-tooltip"></div>
     <div id="ddos-overlay"><div class="ddos-alert" id="ddos-alert">🔴 DDoS ÚTOK</div></div>
     <div id="defense-overlay">
@@ -1375,6 +1416,10 @@ body.light .node-body { background:linear-gradient(150deg,#1b2740,#141f33); }
   <!-- CONTROL BAR -->
   <div class="ctrl-bar">
     <div class="ctrl-top">
+      <button class="btn-localsim active" id="btn-localsim" onclick="toggleGlobalMode()">
+        <span class="ls-ico">🏢</span><span class="ls-txt">LOCAL SIM</span>
+      </button>
+      <div class="ctrl-sep"></div>
       <button class="btn primary" id="btn-play" onclick="play()">▶ Spustit</button>
       <button class="btn warn" id="btn-pause" onclick="togglePause()" disabled>⏸ Pauza</button>
       <button class="btn" id="btn-step" onclick="stepOnce()">⏭ Krok</button>
@@ -2224,12 +2269,12 @@ function unproject(sx,sy){
 // depth of a node (for shadow/z-order) — further "back" = smaller gy after project
 function nodeDepth(d){ const [,sy]=project(d.gx,d.gy); return sy; }
 
-function px(d){ return project(d.gx, d.gy); }
+function px(d){ return (typeof nodeScreen==='function') ? nodeScreen(d) : project(d.gx, d.gy); }
 function pxxy(gx,gy){ return project(gx,gy); }
 
 // master animation loop
 let rafId=null;
-function startLoop(){ if(rafId) return; const tick=()=>{ animT+=0.016; stepIso(); render(); updateNodePositions(); rafId=requestAnimationFrame(tick); }; tick(); }
+function startLoop(){ if(rafId) return; const tick=()=>{ animT+=0.016; stepIso(); stepCam(); render(); updateNodePositions(); rafId=requestAnimationFrame(tick); }; tick(); }
 function stepIso(){ if(Math.abs(iso-isoTarget)>0.001){ iso += (isoTarget-iso)*0.12; } else iso=isoTarget; }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2256,6 +2301,7 @@ function setChk(id,on){
 function syncMenuChecks(){
   setChk('dd-stats',statsVisible); setChk('dd-trace',traceVisible); setChk('dd-heatmap',heatmapOn);
   setChk('dd-iso',isoMode); setChk('dd-grid',gridOn); setChk('dd-ambient',ambientOn); setChk('dd-banners',bannersEnabled);
+  setChk('dd-buildings', localRender==='building');
 }
 
 function toggleIso(){ isoMode=!isoMode; isoTarget=isoMode?1:0; setChk('dd-iso',isoMode); }
@@ -2269,9 +2315,13 @@ function render(){
   if(globalMode){ drawParticles(); renderGlobe(); return; }
   drawHexGrid();
   drawParticles();
-  if(iso>0.01) drawGroundPlane();
-  drawZones();
-  if(iso>0.01) drawNodePillars();
+  if(localRender==='building'){
+    drawBuildings();
+  } else {
+    if(iso>0.01) drawGroundPlane();
+    drawZones();
+    if(iso>0.01) drawNodePillars();
+  }
   drawLinks();
   drawLiveLinks();
   drawAttackerLink();
@@ -3337,16 +3387,33 @@ function focusGlobe(idx){
 /* ── interaction (drag + wheel + hover) ── */
 function setupGlobe(){
   const wrap=document.getElementById('topo-wrap');
-  wrap.addEventListener('mousedown',e=>{ if(!globalMode) return; globeDrag=true; gDragX=e.clientX; gDragY=e.clientY; wrap.classList.add('grabbing'); });
-  window.addEventListener('mousemove',e=>{ if(!globalMode) return;
-    if(globeDrag){ const dx=e.clientX-gDragX, dy=e.clientY-gDragY; gDragX=e.clientX; gDragY=e.clientY;
-      globeYaw+=dx*0.006; gVelY=dx*0.0006;
-      globeTilt=Math.max(-1.3,Math.min(1.3,globeTilt - dy*0.006)); }
-    else globeHover(e);
+  const buildingActive=()=>(!globalMode && localRender==='building');
+  wrap.addEventListener('mousedown',e=>{
+    if(globalMode){ globeDrag=true; gDragX=e.clientX; gDragY=e.clientY; wrap.classList.add('grabbing'); return; }
+    if(buildingActive()){ if(e.target.closest('.node')) return;   // let node clicks select
+      bDrag=true; bDragX=e.clientX; bDragY=e.clientY; camVel=0; wrap.classList.add('grabbing'); }
   });
-  window.addEventListener('mouseup',()=>{ if(globeDrag){ globeDrag=false; wrap.classList.remove('grabbing'); } });
-  wrap.addEventListener('wheel',e=>{ if(!globalMode) return; e.preventDefault(); globeZoom=Math.max(0.7,Math.min(2.2, globeZoom - e.deltaY*0.0012)); },{passive:false});
+  window.addEventListener('mousemove',e=>{
+    if(globalMode){
+      if(globeDrag){ const dx=e.clientX-gDragX, dy=e.clientY-gDragY; gDragX=e.clientX; gDragY=e.clientY;
+        globeYaw+=dx*0.006; gVelY=dx*0.0006;
+        globeTilt=Math.max(-1.3,Math.min(1.3,globeTilt - dy*0.006)); }
+      else globeHover(e);
+      return;
+    }
+    if(buildingActive() && bDrag){ const dx=e.clientX-bDragX, dy=e.clientY-bDragY; bDragX=e.clientX; bDragY=e.clientY;
+      camYaw+=dx*0.007; camVel=dx*0.0007;
+      camPitch=Math.max(0.1,Math.min(1.35, camPitch - dy*0.005)); }
+  });
+  window.addEventListener('mouseup',()=>{ if(globeDrag){ globeDrag=false; wrap.classList.remove('grabbing'); }
+    if(bDrag){ bDrag=false; wrap.classList.remove('grabbing'); } });
+  wrap.addEventListener('wheel',e=>{
+    if(globalMode){ e.preventDefault(); globeZoom=Math.max(0.7,Math.min(2.2, globeZoom - e.deltaY*0.0012)); return; }
+    if(buildingActive()){ e.preventDefault(); bWorldScale=Math.max(12,Math.min(48, bWorldScale - e.deltaY*0.02)); }
+  },{passive:false});
+  wrap.addEventListener('dblclick',e=>{ if(buildingActive()) resetBuildingCam(); });
 }
+function stepCam(){ if(!globalMode && localRender==='building' && !bDrag && Math.abs(camVel)>0.0002){ camYaw+=camVel; camVel*=0.92; } }
 function globeHover(e){
   const tip=document.getElementById('globe-tooltip'); const wrap=document.getElementById('topo-wrap').getBoundingClientRect();
   const mx=(e.clientX-wrap.left)*(W/wrap.width), my=(e.clientY-wrap.top)*(H/wrap.height);
@@ -3385,8 +3452,287 @@ function toggleGlobalMode(){
     document.getElementById('globe-tooltip').classList.remove('show');
     setStatus('Připraven');
     if(statsVisible) document.getElementById('live-stats').classList.add('show');
+    if(localRender==='building'){ fitBuildingScene(); }
+    const bt=document.getElementById('building-title'); if(bt) bt.style.display=(localRender==='building')?'':'none';
   }
   const b=document.getElementById('btn-global'); if(b) b.querySelector('.gb-txt').textContent=globalMode?'2D SÍŤ':'GLOBAL';
+  syncViewButtons();
+}
+function syncViewButtons(){
+  const gb=document.getElementById('btn-global'); if(gb) gb.querySelector('.gb-txt').textContent=globalMode?'2D SÍŤ':'GLOBAL';
+  const lb=document.getElementById('btn-localsim');
+  if(lb){ const t=lb.querySelector('.ls-txt'), ic=lb.querySelector('.ls-ico');
+    if(t) t.textContent=globalMode?'LOCAL SIM':'GLOBAL VIEW';
+    if(ic) ic.textContent=globalMode?'🏢':'🌍';
+    lb.classList.toggle('active',!globalMode); }
+  const bt=document.getElementById('building-title'); if(bt) bt.style.display=(!globalMode && localRender==='building')?'':'none';
+  document.body.classList.toggle('building-view', !globalMode && localRender==='building');
+}
+// toggle schematic vs building for the local view
+function toggleLocalStyle(){
+  localRender = (localRender==='building')?'schematic':'building';
+  setChk('dd-buildings', localRender==='building');
+  if(!globalMode){ if(localRender==='building') fitBuildingScene(); buildNodes(); }
+  const bt=document.getElementById('building-title'); if(bt) bt.style.display=(!globalMode && localRender==='building')?'':'none';
+  toast(localRender==='building'?'🏢 Lokální pohled: holografické budovy':'🔲 Lokální pohled: schéma sítě');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ░▒▓ LOCAL SIM — HOLOGRAPHIC CUTAWAY BUILDINGS ▓▒░
+   ═══════════════════════════════════════════════════════════ */
+let localRender='building';   // 'building' | 'schematic'
+let bWorldScale=24, bOX=0, bOY=0;   // scene scale + origin (computed to fit)
+let scCX=12.5, scCY=2.5;            // scene ground centre (world units)
+// orbit camera — default: facing the buildings head-on with a slight tilt
+const CAM_DEFAULT={yaw:-0.16, pitch:0.52};
+let camYaw=CAM_DEFAULT.yaw, camPitch=CAM_DEFAULT.pitch;
+let camVel=0, bDrag=false, bDragX=0, bDragY=0;
+
+// orbit projection: rotate around vertical axis (yaw), tilt by pitch
+function isoWorld(wx,wy,wz){
+  const dx=wx-scCX, dy=wy-scCY, dz=wz;
+  const cy=Math.cos(camYaw), sy=Math.sin(camYaw);
+  const x1=dx*cy - dy*sy;
+  const y1=dx*sy + dy*cy;
+  const sp=Math.sin(camPitch), cp=Math.cos(camPitch);
+  return [ bOX + x1*bWorldScale, bOY + (y1*sp - dz*cp)*bWorldScale ];
+}
+// depth into screen; larger return = NEARER the camera (draw later / on top)
+function isoDepth(wx,wy,wz){
+  const dx=wx-scCX, dy=wy-scCY;
+  const y1=dx*Math.sin(camYaw)+dy*Math.cos(camYaw);
+  return -(y1*Math.cos(camPitch)+wz*Math.sin(camPitch));
+}
+// horizontal "into screen" direction — used to pick cutaway (back-facing) walls
+function camForward(){ return [Math.sin(camYaw), Math.cos(camYaw)]; }
+function wallIsBack(nx,ny){ const f=camForward(); return (nx*f[0]+ny*f[1])>0.015; }
+function resetBuildingCam(){ camYaw=CAM_DEFAULT.yaw; camPitch=CAM_DEFAULT.pitch; camVel=0; fitBuildingScene(); toast('🎥 Kamera vycentrována'); }
+
+// ── building specifications (world units) ──
+const BUILDINGS=[
+  { id:'A', name:'CORP HQ · LAN-A', color:'#2d9bff',
+    x0:0,x1:6, y0:0.5,y1:4.5, floors:[0,3,6], fh:3, roof:9, antenna:true, main:true,
+    rooms:[ {z:0, label:'SÍŤ / MDF',  kind:'net'},
+            {z:3, label:'SERVEROVNA',  kind:'server'},
+            {z:6, label:'KANCELÁŘ',    kind:'office'} ],
+    doors:[ {x:6,y:3,z:0,label:'VSTUP'}, {x:2.5,y:4.5,z:0,label:'DOCK'} ] },
+  { id:'B', name:'INTERNET EXCHANGE', color:'#b47bff',
+    x0:11,x1:14, y0:1,y1:4, floors:[0,3], fh:3, roof:6.5, tower:true,
+    rooms:[ {z:0,label:'ISP-2 / CARRIER',kind:'carrier'}, {z:3,label:'ISP-1 / PEERING',kind:'carrier'} ],
+    doors:[ {x:14,y:2.5,z:0,label:'NOC'} ] },
+  { id:'C', name:'DATACENTER · LAN-B', color:'#00ffc8',
+    x0:19,x1:25, y0:0.5,y1:4.5, floors:[0,3], fh:3, roof:6.5,
+    rooms:[ {z:0,label:'SÍŤ / EDGE',kind:'net'}, {z:3,label:'SERVER HALL',kind:'server'} ],
+    doors:[ {x:19,y:3,z:0,label:'VSTUP'} ] },
+];
+
+// ── device world positions [wx,wy,wz] ──
+const BPOS={
+  // Building A — CORP HQ
+  swA:[1.4,1.4,0.3], rtrA:[4.8,3.4,0.3],
+  srvA:[1.8,2.0,3.3],
+  pcA1:[1.4,1.3,6.3], pcA2:[4.2,1.4,6.3], pcA3:[2.8,3.6,6.3],
+  apLegit:[3.0,2.5,9.2],
+  wifiClient:[2.5,6.2,0.8],           // Bob outside, in front of CORP HQ
+  // attackers outside A
+  attacker:[-1.8,4.2,0.4],            // Eve at the perimeter / basement
+  apRogue:[-0.6,6.2,2.2],             // Evil Twin in the street
+  // Building B — Internet Exchange
+  isp2:[12.5,2.5,0.3], isp1:[12.5,2.5,3.3],
+  // Building C — Datacenter
+  rtrB:[19.8,3.4,0.3], swB:[22.0,2.0,0.3], pcB2:[24.0,4.0,0.3],
+  srvB:[20.5,2.0,3.3], pcB1:[23.0,3.2,3.3],
+};
+
+// compute scene centre/origin/scale to fit the building world into the canvas
+function fitBuildingScene(){
+  // scene ground centre from building extents
+  let bx0=1e9,bx1=-1e9,by0=1e9,by1=-1e9;
+  BUILDINGS.forEach(b=>{ bx0=Math.min(bx0,b.x0);bx1=Math.max(bx1,b.x1);by0=Math.min(by0,b.y0);by1=Math.max(by1,b.y1); });
+  scCX=(bx0+bx1)/2; scCY=(by0+by1)/2;
+  // gather extreme world points (building corners + devices)
+  const pts=[];
+  BUILDINGS.forEach(b=>{ for(const x of [b.x0,b.x1]) for(const y of [b.y0,b.y1]) for(const z of [0,b.roof]) pts.push([x,y,z]); });
+  Object.values(BPOS).forEach(p=>pts.push(p));
+  // provisional scale, then centre the projected bounding box
+  bWorldScale = Math.max(17, Math.min(32, Math.min(W*0.026, H*0.040)));
+  bOX=0; bOY=0;
+  let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  pts.forEach(p=>{ const [sx,sy]=isoWorld(p[0],p[1],p[2]); minx=Math.min(minx,sx);maxx=Math.max(maxx,sx);miny=Math.min(miny,sy);maxy=Math.max(maxy,sy); });
+  // shrink scale if too wide/tall
+  const cw=maxx-minx, ch=maxy-miny;
+  const fit=Math.min((W*0.88)/Math.max(1,cw), (H*0.70)/Math.max(1,ch), 1);
+  if(fit<1){ bWorldScale*=fit; minx*=fit;maxx*=fit;miny*=fit;maxy*=fit; }
+  bOX = W*0.5 - (minx+maxx)/2;
+  bOY = H*0.50 - (miny+maxy)/2;
+}
+
+// screen position used by both canvas (px) and DOM nodes
+function nodeScreen(d){
+  if(!globalMode && localRender==='building'){
+    const p=BPOS[d.id]; if(p) return isoWorld(p[0],p[1],p[2]);
+  }
+  return project(d.gx,d.gy);
+}
+
+/* ── building draw helpers ── */
+function wpoly(pts){ ctx.beginPath(); pts.forEach((p,i)=>{ const [x,y]=isoWorld(p[0],p[1],p[2]); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.closePath(); }
+function wline(a,b){ const [x1,y1]=isoWorld(a[0],a[1],a[2]),[x2,y2]=isoWorld(b[0],b[1],b[2]); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
+
+function drawBuildings(){
+  // soft holo floor glow under the whole scene
+  BUILDINGS.forEach(b=>{
+    const cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2;
+    const [gx,gy]=isoWorld(cx,cy,0);
+    const g=ctx.createRadialGradient(gx,gy,4,gx,gy,bWorldScale*4);
+    g.addColorStop(0,hexA(b.color,0.10)); g.addColorStop(1,hexA(b.color,0));
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(gx,gy,bWorldScale*4.2,bWorldScale*1.6,0,0,7); ctx.fill();
+  });
+  // draw buildings far→near (painter's order by camera depth of centre)
+  const order=[...BUILDINGS].sort((a,b)=> isoDepth((a.x0+a.x1)/2,(a.y0+a.y1)/2,0) - isoDepth((b.x0+b.x1)/2,(b.y0+b.y1)/2,0) );
+  order.forEach(drawBuilding);
+}
+
+// draw a vertical wall as a faint grid (axis 'x' → wall at x=val spanning y; 'y' → at y=val spanning x)
+function drawWallGrid(b,axis,val,col){
+  ctx.strokeStyle=hexA(col,0.17); ctx.lineWidth=0.7;
+  if(axis==='y'){
+    for(let z=0;z<=b.roof+0.01;z+=b.fh) wline([b.x0,val,z],[b.x1,val,z]);
+    for(let i=0;i<=4;i++){ const x=b.x0+(b.x1-b.x0)*i/4; wline([x,val,0],[x,val,b.roof]); }
+  } else {
+    for(let z=0;z<=b.roof+0.01;z+=b.fh) wline([val,b.y0,z],[val,b.y1,z]);
+    for(let i=0;i<=4;i++){ const y=b.y0+(b.y1-b.y0)*i/4; wline([val,y,0],[val,y,b.roof]); }
+  }
+}
+
+function drawBuilding(b){
+  const col=b.color;
+  // ── base platform ──
+  ctx.strokeStyle=hexA(col,0.5); ctx.lineWidth=1.4; ctx.shadowBlur=8; ctx.shadowColor=col;
+  wpoly([[b.x0,b.y0,0],[b.x1,b.y0,0],[b.x1,b.y1,0],[b.x0,b.y1,0]]);
+  ctx.fillStyle=hexA(col,0.05); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+
+  // ── cutaway: draw only the BACK-facing walls (so interior stays visible from any angle) ──
+  if(wallIsBack(0,-1)) drawWallGrid(b,'y',b.y0,col);
+  if(wallIsBack(0, 1)) drawWallGrid(b,'y',b.y1,col);
+  if(wallIsBack(-1,0)) drawWallGrid(b,'x',b.x0,col);
+  if(wallIsBack( 1,0)) drawWallGrid(b,'x',b.x1,col);
+
+  // ── floor slabs ──
+  b.floors.forEach((z)=>{
+    if(z===0) return;
+    ctx.strokeStyle=hexA(col,0.4); ctx.lineWidth=1;
+    wpoly([[b.x0,b.y0,z],[b.x1,b.y0,z],[b.x1,b.y1,z],[b.x0,b.y1,z]]);
+    ctx.fillStyle=hexA(col,0.04); ctx.fill(); ctx.stroke();
+  });
+
+  // ── furniture per room ──
+  b.rooms.forEach(r=> drawRoomFurniture(b,r));
+
+  // ── corner pillars ──
+  ctx.strokeStyle=hexA(col,0.55); ctx.lineWidth=1.3; ctx.shadowBlur=6; ctx.shadowColor=col;
+  [[b.x0,b.y0],[b.x1,b.y0],[b.x0,b.y1],[b.x1,b.y1]].forEach(c=> wline([c[0],c[1],0],[c[0],c[1],b.roof]));
+  ctx.shadowBlur=0;
+
+  // ── roof outline ──
+  ctx.strokeStyle=hexA(col,0.65); ctx.lineWidth=1.5; ctx.shadowBlur=10; ctx.shadowColor=col;
+  wpoly([[b.x0,b.y0,b.roof],[b.x1,b.y0,b.roof],[b.x1,b.y1,b.roof],[b.x0,b.y1,b.roof]]);
+  ctx.fillStyle=hexA(col,0.06); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+
+  // ── antenna (WiFi) on building A ──
+  if(b.antenna){
+    const ax=(b.x0+b.x1)/2, ay=(b.y0+b.y1)/2;
+    ctx.strokeStyle=hexA('#00f0ff',0.7); ctx.lineWidth=1.2;
+    wline([ax,ay,b.roof],[ax,ay,b.roof+1.4]);
+    const [tx,ty]=isoWorld(ax,ay,b.roof+1.4);
+    const pr=0.5+0.5*Math.sin(animT*3);
+    for(let r=1;r<=3;r++){ ctx.beginPath(); ctx.arc(tx,ty,(r*7+5*pr),0,7);
+      ctx.strokeStyle=hexA('#00f0ff',0.3-r*0.07+0.1*pr); ctx.lineWidth=1; ctx.stroke(); }
+  }
+
+  // ── doors / entry points ──
+  (b.doors||[]).forEach(dr=>{
+    const [dx,dy]=isoWorld(dr.x,dr.y,dr.z);
+    const pr=0.5+0.5*Math.sin(animT*2.5+dx);
+    ctx.fillStyle=hexA('#ffd84d',0.5+0.3*pr); ctx.shadowBlur=8; ctx.shadowColor='#ffd84d';
+    ctx.beginPath(); ctx.arc(dx,dy,2.6,0,7); ctx.fill(); ctx.shadowBlur=0;
+    if(b.main){ ctx.font='7px "Share Tech Mono",monospace'; ctx.fillStyle=hexA('#ffd84d',0.7); ctx.textAlign='center'; ctx.fillText('▸'+dr.label, dx, dy-6); ctx.textAlign='left'; }
+  });
+
+  // ── room labels — placed on whichever vertical edge is rightmost on screen ──
+  b.rooms.forEach(r=>{
+    const zc=r.z+b.fh*0.6;
+    let best=null,bx=-1e9;
+    for(const x of [b.x0,b.x1]) for(const y of [b.y0,b.y1]){ const [sx,sy]=isoWorld(x,y,zc); if(sx>bx){bx=sx;best=[sx,sy];} }
+    ctx.font='8px "Share Tech Mono",monospace'; ctx.fillStyle=hexA(col,0.75);
+    ctx.textAlign='left'; ctx.fillText(r.label, best[0]+6, best[1]+3);
+  });
+
+  // ── building name plate — below the lowest-on-screen footprint corner ──
+  let np=null,ny0=-1e9;
+  for(const x of [b.x0,b.x1]) for(const y of [b.y0,b.y1]){ const [sx,sy]=isoWorld(x,y,0); if(sy>ny0){ny0=sy; np=[(b.x0+b.x1)/2,(b.y0+b.y1)/2];} }
+  const [nx,ny]=isoWorld(np[0],np[1],0);
+  ctx.font='700 9px "Rajdhani",sans-serif'; ctx.fillStyle=hexA(col,0.95);
+  ctx.textAlign='center'; ctx.fillText(b.name, nx, ny0+22);
+  if(b.main){ ctx.font='7px "Share Tech Mono",monospace'; ctx.fillStyle=hexA('#ff9838',0.8); ctx.fillText('⚠ HACKNUTELNÉ · MULTIPLE ENTRY POINTS', nx, ny0+33); }
+  ctx.textAlign='left';
+}
+
+// furniture by room kind
+function drawRoomFurniture(b,r){
+  const col=b.color, z=r.z, top=z+b.fh;
+  if(r.kind==='server' || r.kind==='carrier'){
+    // rows of server racks
+    const nRacks=r.kind==='carrier'?2:3;
+    for(let i=0;i<nRacks;i++){
+      const rx=b.x0+1.0 + i*((b.x1-b.x0-1.6)/Math.max(1,nRacks-1));
+      const ry=b.y0+1.0;
+      drawRack(rx,ry,z, 0.7, 0.9, b.fh*0.8, col, i);
+    }
+  } else if(r.kind==='office'){
+    // desks with monitors
+    for(let i=0;i<3;i++){
+      const dx=b.x0+1.0 + i*((b.x1-b.x0-1.6)/2);
+      const dy=b.y0+1.2 + (i%2)*1.6;
+      drawDesk(dx,dy,z, col);
+    }
+  } else if(r.kind==='net'){
+    // one rack + patch panel strip
+    drawRack(b.x0+1.0, b.y0+1.0, z, 0.8, 0.8, b.fh*0.7, col, 0);
+    // cable tray line
+    ctx.strokeStyle=hexA(col,0.3); ctx.lineWidth=0.8;
+    wline([b.x0+0.6,b.y0+0.6,z+b.fh*0.85],[b.x1-0.6,b.y0+0.6,z+b.fh*0.85]);
+  }
+}
+function drawRack(x,y,z,dw,dd,dh,col,seed){
+  // vertical iso box
+  const top=z+dh;
+  ctx.strokeStyle=hexA(col,0.5); ctx.lineWidth=0.9;
+  // front faces (two visible) + top
+  wpoly([[x,y,z],[x+dw,y,z],[x+dw,y,top],[x,y,top]]); ctx.fillStyle=hexA(col,0.08); ctx.fill(); ctx.stroke();
+  wpoly([[x+dw,y,z],[x+dw,y+dd,z],[x+dw,y+dd,top],[x+dw,y,top]]); ctx.fillStyle=hexA(col,0.05); ctx.fill(); ctx.stroke();
+  wpoly([[x,y,top],[x+dw,y,top],[x+dw,y+dd,top],[x,y+dd,top]]); ctx.fillStyle=hexA(col,0.12); ctx.fill(); ctx.stroke();
+  // rack units (horizontal lines on front)
+  ctx.strokeStyle=hexA(col,0.3); ctx.lineWidth=0.5;
+  for(let u=1;u<5;u++){ const uz=z+dh*u/5; wline([x,y,uz],[x+dw,y,uz]); }
+  // blinking status LEDs
+  const [lx,ly]=isoWorld(x+dw*0.5,y,z+dh*0.5);
+  const blink=(Math.sin(animT*6+seed*2)>0);
+  ctx.fillStyle=blink?'#00ffc8':'#ffd84d'; ctx.shadowBlur=5; ctx.shadowColor=ctx.fillStyle;
+  ctx.beginPath(); ctx.arc(lx,ly,1.3,0,7); ctx.fill(); ctx.shadowBlur=0;
+}
+function drawDesk(x,y,z,col){
+  const h=0.9, dw=1.4, dd=0.9;
+  ctx.strokeStyle=hexA(col,0.4); ctx.lineWidth=0.8;
+  // desktop surface
+  wpoly([[x,y,z+h],[x+dw,y,z+h],[x+dw,y+dd,z+h],[x,y+dd,z+h]]); ctx.fillStyle=hexA(col,0.07); ctx.fill(); ctx.stroke();
+  // legs
+  [[x,y],[x+dw,y],[x,y+dd],[x+dw,y+dd]].forEach(c=> wline([c[0],c[1],z],[c[0],c[1],z+h]));
+  // monitor
+  const mx=x+dw*0.5, my=y+0.15;
+  ctx.strokeStyle=hexA('#00f0ff',0.6); ctx.lineWidth=0.8;
+  wpoly([[mx-0.3,my,z+h],[mx+0.3,my,z+h],[mx+0.3,my,z+h+0.7],[mx-0.3,my,z+h+0.7]]);
+  ctx.fillStyle=hexA('#00f0ff',0.12); ctx.fill(); ctx.stroke();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -3400,7 +3746,7 @@ function buildNodes(){
     el.className='node'+(d.cls==='attacker'?' attacker':'')+(d.hidden?' hidden-node':'')+(revealed[d.id]?' reveal':'');
     if(!d.up) el.classList.add('down');
     el.id='node-'+d.id;
-    const [nx,ny]=project(d.gx,d.gy);
+    const [nx,ny]=nodeScreen(d);
     el.style.left=nx+'px'; el.style.top=ny+'px';
     const ip=primaryIp(d);
     const ipClass = d.up ? '' : ' down';
@@ -3420,13 +3766,19 @@ function buildNodes(){
 }
 // reposition all node DOM elements through the current projection (called every frame)
 function updateNodePositions(){
+  if(globalMode) return;   // nodes hidden in globe mode
+  const buildingV=(localRender==='building');
   devList().forEach(d=>{
     const el=document.getElementById('node-'+d.id); if(!el) return;
     if(el.classList.contains('dragging')) return;
-    const [nx,ny]=project(d.gx,d.gy);
+    const [nx,ny]=nodeScreen(d);
     el.style.left=nx+'px'; el.style.top=ny+'px';
-    if(iso>0.01){
-      // depth scale: nodes lower on screen (closer) slightly bigger
+    if(buildingV){
+      const p=BPOS[d.id];
+      const dep=p?isoDepth(p[0],p[1],p[2]):0;
+      el.style.transform='translate(-50%,-50%) scale(0.82)';
+      el.style.zIndex=String(20+Math.round(dep));   // nearer draws on top
+    } else if(iso>0.01){
       const depth=ny/H; const sc=0.88+0.22*depth;
       el.style.transform=`translate(-50%,-50%) scale(${sc.toFixed(3)})`;
       el.style.zIndex=String(5+Math.round(depth*20));
@@ -3455,7 +3807,7 @@ function selectDevice(id){
 // drag nodes around
 function enableDrag(el,d){
   let drag=false,moved=false,sx,sy;
-  el.addEventListener('mousedown',e=>{ drag=true;moved=false;sx=e.clientX;sy=e.clientY; el.classList.add('dragging'); e.preventDefault(); });
+  el.addEventListener('mousedown',e=>{ if(!globalMode && localRender==='building') return; drag=true;moved=false;sx=e.clientX;sy=e.clientY; el.classList.add('dragging'); e.preventDefault(); });
   window.addEventListener('mousemove',e=>{ if(!drag) return; const wrap=document.getElementById('topo-wrap').getBoundingClientRect();
     const spx=e.clientX-wrap.left, spy=e.clientY-wrap.top;
     const [gx,gy]=unproject(spx*(W/wrap.width), spy*(H/wrap.height));
@@ -4550,7 +4902,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='r'||e.key==='R') resetSim();
 });
 document.getElementById('speed-range').addEventListener('input',function(){ document.getElementById('speed-val').textContent=this.value; });
-window.addEventListener('resize',()=>{ initCanvas(); buildNodes(); });
+window.addEventListener('resize',()=>{ initCanvas(); if(!globalMode && localRender==='building') fitBuildingScene(); buildNodes(); });
 
 /* ═══════════════════════════════════════════════════════════
    BOOT
@@ -4572,11 +4924,14 @@ window.addEventListener('load',()=>{
   syncMenuChecks();
   buildLandDots();
   setupGlobe();
+  fitBuildingScene();
   addLog('◈ NET-SIM v5 · HOLO — jádro online','#00f0ff');
   addLog('Topologie: LAN-A (10.0.1.0/24) ↔ NET ↔ LAN-B (10.0.2.0/24)','#2d9bff');
-  addLog('💡 Terminál: konfiguruj zařízení Cisco příkazy — změny ovlivní simulaci','#b47bff');
-  addLog('🌐 «Živě» = provoz na pozadí · «📡 Paket» = postav vlastní · «🦈 Wireshark» = zachycení','#00ffc8');
+  addLog('🌍 GLOBAL = holografická Země (default) · 🏢 LOCAL SIM = budovy v řezu','#b47bff');
+  addLog('💡 Terminál: konfiguruj zařízení Cisco příkazy — změny ovlivní simulaci','#00ffc8');
   addLog('Klávesy: SPACE=play/pause · →=krok · R=reset','#3d8b98');
+  // open into GLOBAL mode by default
+  toggleGlobalMode();
   runBoot();
 });
 </script>
